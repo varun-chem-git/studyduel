@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>StudyDuel ⚔️</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0b1a;--surface:rgba(255,255,255,.06);--surface2:rgba(255,255,255,.1);
+  --p1:#ff6b6b;--p1g:#feca57;--p2:#48dbfb;--p2g:#a29bfe;
+  --text:#f0f0f0;--text2:rgba(255,255,255,.55);--radius:16px;
+  --nav-h:64px;--header-h:56px;
+}
+html{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+body{min-height:100dvh;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font:inherit;color:inherit;background:var(--surface2);border:2px solid transparent;border-radius:12px;padding:12px 16px;outline:none;width:100%;transition:.2s}
+input:focus,textarea:focus{border-color:var(--p1)}
+textarea{resize:none;min-height:60px}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+
+/* ─── Setup Overlay ─── */
+.setup-overlay{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .4s}
+.setup-card{width:100%;max-width:420px;text-align:center}
+.setup-card h1{font-size:2rem;margin-bottom:4px;background:linear-gradient(135deg,var(--p1),var(--p1g));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.setup-card p{color:var(--text2);margin-bottom:32px;font-size:.95rem}
+.setup-card label{display:block;text-align:left;font-weight:600;margin-bottom:6px;margin-top:20px;font-size:.85rem;color:var(--text2)}
+.setup-card input{margin-bottom:4px}
+.emoji-picker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.emoji-picker button{font-size:1.6rem;width:44px;height:44px;border-radius:12px;background:var(--surface);transition:.2s;border:2px solid transparent}
+.emoji-picker button.sel{border-color:var(--p1);background:rgba(255,107,107,.15);transform:scale(1.1)}
+.setup-go{margin-top:32px;width:100%;padding:16px;border-radius:14px;font-weight:700;font-size:1.05rem;background:linear-gradient(135deg,var(--p1),var(--p1g));color:#000;transition:.2s}
+.setup-go:active{transform:scale(.97)}
+.setup-divider{height:1px;background:var(--surface2);margin:28px 0 8px}
+.player-label{font-size:1rem;font-weight:700;margin-bottom:2px}
+.player-label .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.p1c{background:linear-gradient(135deg,var(--p1),var(--p1g))}
+.p2c{background:linear-gradient(135deg,var(--p2),var(--p2g))}
+
+/* ─── Header ─── */
+header{height:var(--header-h);display:flex;align-items:center;justify-content:center;padding:0 20px;position:sticky;top:0;z-index:50;background:rgba(11,11,26,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--surface)}
+header h1{font-size:1.15rem;font-weight:800;letter-spacing:.5px}
+header h1 span{background:linear-gradient(135deg,var(--p1),var(--p1g));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* ─── Player Stat Bar ─── */
+.stat-bar{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 16px 8px}
+.stat-card{background:var(--surface);border-radius:var(--radius);padding:14px;position:relative;overflow:hidden;transition:.2s}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.stat-card.p1 .sc-emoji,.stat-card.p1 .sc-name{filter:drop-shadow(0 0 8px rgba(255,107,107,.4))}
+.stat-card.p2 .sc-emoji,.stat-card.p2 .sc-name{filter:drop-shadow(0 0 8px rgba(72,219,251,.4))}
+.stat-card.p1::before{background:linear-gradient(90deg,var(--p1),var(--p1g))}
+.stat-card.p2::before{background:linear-gradient(90deg,var(--p2),var(--p2g))}
+.sc-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.sc-emoji{font-size:1.8rem}
+.sc-name{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-title{font-size:.7rem;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.xp-bar{height:6px;background:var(--surface2);border-radius:6px;margin-top:8px;overflow:hidden}
+.xp-fill{height:100%;border-radius:6px;transition:width .8s cubic-bezier(.22,1,.36,1)}
+.stat-card.p1 .xp-fill{background:linear-gradient(90deg,var(--p1),var(--p1g))}
+.stat-card.p2 .xp-fill{background:linear-gradient(90deg,var(--p2),var(--p2g))}
+.sc-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:.75rem;color:var(--text2)}
+.streak-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(255,165,0,.15);color:#ffa500;padding:2px 8px;border-radius:20px;font-weight:700;font-size:.75rem}
+
+/* ─── Main Content ─── */
+main{flex:1;padding:0 16px 100px;overflow-y:auto}
+
+/* ─── Bottom Nav ─── */
+nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:rgba(11,11,26,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--surface);display:flex;z-index:50}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text2);transition:.2s;font-size:.65rem;font-weight:600;letter-spacing:.3px}
+nav button .nav-icon{font-size:1.35rem;transition:.2s}
+nav button.active{color:var(--p1)}
+nav button.active .nav-icon{transform:scale(1.15);filter:drop-shadow(0 0 8px rgba(255,107,107,.5))}
+
+/* ─── Tab Panels ─── */
+.tab{display:none;animation:fadeSlideUp .35s ease}
+.tab.active{display:block}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ─── Section Headers ─── */
+.section-title{font-size:.8rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:20px 0 12px;display:flex;align-items:center;gap:8px}
+
+/* ─── LOG TAB ─── */
+.player-toggle{display:flex;gap:8px;margin-bottom:20px}
+.player-toggle button{flex:1;padding:14px;border-radius:14px;font-weight:700;font-size:.9rem;background:var(--surface);transition:.25s;border:2px solid transparent}
+.player-toggle button.sel{transform:scale(1.02)}
+.player-toggle button.p1.sel{border-color:var(--p1);background:rgba(255,107,107,.12);box-shadow:0 0 20px rgba(255,107,107,.15)}
+.player-toggle button.p2.sel{border-color:var(--p2);background:rgba(72,219,251,.12);box-shadow:0 0 20px rgba(72,219,251,.15)}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.cat-btn{padding:14px 8px;border-radius:14px;background:var(--surface);text-align:center;transition:.25s;border:2px solid transparent}
+.cat-btn .cat-icon{font-size:1.5rem;display:block;margin-bottom:4px}
+.cat-btn .cat-label{font-size:.7rem;font-weight:600;color:var(--text2)}
+.cat-btn.sel{transform:scale(1.04);border-color:var(--p1);background:rgba(255,107,107,.1)}
+.log-form textarea{margin-bottom:12px}
+.dur-row{display:flex;gap:8px;align-items:center;margin-bottom:20px}
+.dur-row input{width:100px;text-align:center;font-weight:700;font-size:1.1rem}
+.dur-row span{color:var(--text2);font-size:.85rem;font-weight:600}
+.dur-presets{display:flex;gap:6px;flex-wrap:wrap}
+.dur-presets button{padding:6px 14px;border-radius:20px;background:var(--surface);font-size:.8rem;font-weight:600;color:var(--text2);transition:.2s}
+.dur-presets button:active{background:var(--surface2);transform:scale(.95)}
+.log-submit{width:100%;padding:16px;border-radius:14px;font-weight:700;font-size:1rem;transition:.2s}
+.log-submit.p1-active{background:linear-gradient(135deg,var(--p1),var(--p1g));color:#000}
+.log-submit.p2-active{background:linear-gradient(135deg,var(--p2),var(--p2g));color:#000}
+.log-submit:active{transform:scale(.97)}
+
+/* ─── DUEL TAB ─── */
+.tug-section{background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.tug-header{text-align:center;margin-bottom:16px}
+.tug-header h2{font-size:1.1rem;font-weight:800}
+.tug-header p{font-size:.8rem;color:var(--text2);margin-top:4px}
+.tug-bar-wrap{position:relative;height:40px;background:var(--surface2);border-radius:20px;overflow:hidden;margin-bottom:12px}
+.tug-fill{position:absolute;top:0;left:0;height:100%;border-radius:20px;transition:width 1s cubic-bezier(.22,1,.36,1)}
+.tug-fill.p1f{background:linear-gradient(90deg,var(--p1),var(--p1g))}
+.tug-fill.p2f{background:linear-gradient(270deg,var(--p2),var(--p2g));left:auto;right:0}
+.tug-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.4rem;z-index:2;transition:left 1s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.tug-scores{display:flex;justify-content:space-between;font-weight:800;font-size:1.1rem}
+.tug-scores .p1s{color:var(--p1)}.tug-scores .p2s{color:var(--p2)}
+.tug-msg{text-align:center;margin-top:12px;font-size:.85rem;font-weight:600;color:var(--text2);min-height:1.2em}
+
+.period-toggle{display:flex;gap:6px;margin-bottom:16px}
+.period-toggle button{flex:1;padding:10px;border-radius:12px;background:var(--surface);font-weight:600;font-size:.8rem;color:var(--text2);transition:.2s;border:2px solid transparent}
+.period-toggle button.sel{border-color:var(--p1);color:var(--text);background:rgba(255,107,107,.1)}
+
+.cat-compare{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.cc-row{background:var(--surface);border-radius:12px;padding:14px}
+.cc-label{font-size:.85rem;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.cc-bars{display:flex;gap:6px;align-items:center}
+.cc-bar-wrap{flex:1;height:10px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.cc-bar-fill{height:100%;border-radius:6px;transition:width .8s cubic-bezier(.22,1,.36,1)}
+.cc-bar-fill.p1f{background:linear-gradient(90deg,var(--p1),var(--p1g))}
+.cc-bar-fill.p2f{background:linear-gradient(90deg,var(--p2),var(--p2g))}
+.cc-val{font-size:.7rem;font-weight:700;width:36px;text-align:center;color:var(--text2)}
+
+/* ─── HISTORY TAB ─── */
+.history-date{font-size:.8rem;font-weight:700;color:var(--text2);margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.activity-card{background:var(--surface);border-radius:14px;padding:14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;border-left:3px solid transparent;animation:fadeSlideUp .3s ease}
+.activity-card.p1-border{border-left-color:var(--p1)}
+.activity-card.p2-border{border-left-color:var(--p2)}
+.ac-icon{font-size:1.5rem;flex-shrink:0;margin-top:2px}
+.ac-body{flex:1;min-width:0}
+.ac-top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.ac-who{font-weight:700;font-size:.85rem}
+.ac-xp{font-size:.75rem;font-weight:700;color:var(--p1g);background:rgba(254,202,87,.12);padding:2px 8px;border-radius:10px}
+.ac-desc{font-size:.85rem;color:var(--text2);margin-bottom:4px;word-break:break-word}
+.ac-meta{font-size:.7rem;color:var(--text2);display:flex;gap:12px}
+.ac-delete{font-size:.75rem;color:rgba(255,107,107,.6);padding:4px 8px;border-radius:8px;transition:.2s;margin-left:auto}
+.ac-delete:hover{background:rgba(255,107,107,.1);color:var(--p1)}
+
+.empty-state{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty-state .es-icon{font-size:3rem;margin-bottom:12px}
+.empty-state p{font-size:.9rem}
+
+/* ─── SETTINGS TAB ─── */
+.setting-group{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.setting-group label{display:block;font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:6px}
+.setting-group input{margin-bottom:12px}
+.setting-btn{width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:.9rem;transition:.2s}
+.setting-btn:active{transform:scale(.97)}
+.btn-save{background:linear-gradient(135deg,var(--p1),var(--p1g));color:#000;margin-bottom:8px}
+.btn-export{background:var(--surface2);margin-bottom:8px}
+.btn-import{background:var(--surface2);margin-bottom:8px}
+.btn-danger{background:rgba(255,107,107,.15);color:var(--p1)}
+
+/* ─── Confetti Canvas ─── */
+#confetti{position:fixed;inset:0;z-index:999;pointer-events:none}
+
+/* ─── Toast ─── */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:rgba(255,255,255,.12);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 24px;font-weight:600;font-size:.9rem;z-index:2000;transition:transform .4s cubic-bezier(.22,1,.36,1);white-space:nowrap;text-align:center;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ─── Responsive ─── */
+@media(min-width:600px){
+  .stat-bar{max-width:520px;margin:0 auto}
+  main{max-width:520px;margin:0 auto}
+  .setup-card{padding:0 24px}
+}
+
+/* ─── Auth / pairing (added) ─── */
+.setup-overlay{align-items:flex-start;overflow-y:auto}
+.setup-card{margin:auto;padding:8px 0}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:14px;border-radius:14px;background:#fff;color:#222;font-weight:700;font-size:1rem;transition:.2s}
+.google-btn:active{transform:scale(.97)}
+.google-btn:disabled{opacity:.6}
+.auth-err{color:var(--p1);font-size:.85rem;margin-top:14px;min-height:1.2em}
+.setup-or{display:flex;align-items:center;gap:12px;margin:28px 0 4px;color:var(--text2);font-size:.8rem}
+.setup-or::before,.setup-or::after{content:'';flex:1;height:1px;background:var(--surface2)}
+.join-row{display:flex;gap:8px;margin-top:8px}
+.code-input{text-transform:uppercase;letter-spacing:5px;text-align:center;font-weight:800}
+.btn-join{padding:0 22px;border-radius:12px;font-weight:700;background:linear-gradient(135deg,var(--p2),var(--p2g));color:#000;white-space:nowrap}
+.signed-as{font-size:.8rem;color:var(--text2);margin-top:22px}
+.signed-as button{color:var(--p2);text-decoration:underline;margin-left:6px;font-size:.8rem}
+.partner-banner{margin:4px 16px 0;padding:12px 14px;border-radius:14px;background:rgba(254,202,87,.12);border:1px solid rgba(254,202,87,.3);font-size:.85rem;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.partner-banner button{background:var(--surface2);padding:6px 12px;border-radius:10px;font-weight:700;font-size:.8rem}
+.room-code{font-size:1.8rem;font-weight:800;letter-spacing:6px;text-align:center;padding:12px;background:var(--surface2);border-radius:12px;margin-bottom:12px}
+.acct{font-size:.8rem;color:var(--text2);text-align:center;margin:10px 0 12px}
+.stat-card.pulse{animation:cardPulse .9s ease}
+@keyframes cardPulse{0%{transform:scale(1)}30%{transform:scale(1.045);box-shadow:0 0 28px rgba(255,255,255,.28)}100%{transform:scale(1)}}
+.spin{width:36px;height:36px;border:4px solid var(--surface2);border-top-color:var(--p1);border-radius:50%;margin:0 auto;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div class="setup-overlay" id="loadScreen"><div class="setup-card"><div class="spin"></div></div></div>
+
+<!-- ═══ LOGIN ═══ -->
+<div class="setup-overlay" id="authScreen" style="display:none">
+<div class="setup-card">
+  <h1>StudyDuel ⚔️</h1>
+  <p>Sign in to duel your accountability partner in real time.</p>
+  <button class="google-btn" id="googleBtn" onclick="signInGoogle()">
+    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+    Continue with Google
+  </button>
+  <div class="auth-err" id="authErr"></div>
+</div>
+</div>
+
+<!-- ═══ PAIR UP ═══ -->
+<div class="setup-overlay" id="pairScreen" style="display:none">
+<div class="setup-card">
+  <h1>Pick your fighter</h1>
+  <p>Set up your profile, then start a duel or join your partner's.</p>
+  <label>Your name</label>
+  <input id="p_name" placeholder="e.g. Varun" maxlength="16">
+  <label>Pick your avatar</label>
+  <div class="emoji-picker" id="ePickPair"></div>
+
+  <button class="setup-go" onclick="createDuel()">Start a new duel ⚔️</button>
+  <div class="setup-or">or join your partner</div>
+  <div class="join-row">
+    <input id="p_code" class="code-input" placeholder="CODE" maxlength="6" autocapitalize="characters" autocomplete="off">
+    <button class="btn-join" onclick="joinDuel()">Join</button>
+  </div>
+  <div class="signed-as"><span id="pairWho"></span><button onclick="doSignOut()">Sign out</button></div>
+</div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<header><h1><span>Study</span>Duel ⚔️</h1></header>
+
+<!-- ═══ PLAYER STAT BAR ═══ -->
+<div class="stat-bar" id="statBar"></div>
+<div class="partner-banner" id="partnerBanner" style="display:none"></div>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main>
+  <!-- LOG TAB -->
+  <div class="tab active" id="tab-log">
+    <div class="section-title">📂 Category</div>
+    <div class="cat-grid" id="catGrid"></div>
+
+    <div class="section-title">✏️ What did you do?</div>
+    <div class="log-form">
+      <textarea id="logDesc" placeholder="Smashed 3 chapters of organic chem 🧪" maxlength="200"></textarea>
+      <div class="section-title">⏱️ Duration</div>
+      <div class="dur-row">
+        <input type="number" id="logDur" value="30" min="1" max="720">
+        <span>minutes</span>
+      </div>
+      <div class="dur-presets">
+        <button onclick="setDur(15)">15m</button>
+        <button onclick="setDur(30)">30m</button>
+        <button onclick="setDur(45)">45m</button>
+        <button onclick="setDur(60)">1h</button>
+        <button onclick="setDur(90)">1.5h</button>
+        <button onclick="setDur(120)">2h</button>
+        <button onclick="setDur(180)">3h</button>
+      </div>
+      <div style="height:16px"></div>
+      <button class="log-submit p1-active" id="logSubmit" onclick="submitLog()">Log Activity 🚀</button>
+    </div>
+  </div>
+
+  <!-- DUEL TAB -->
+  <div class="tab" id="tab-duel">
+    <div class="period-toggle" id="periodToggle"></div>
+    <div class="tug-section">
+      <div class="tug-header">
+        <h2>⚔️ Tug of War</h2>
+        <p>XP pulls the rope to your side!</p>
+      </div>
+      <div class="tug-bar-wrap">
+        <div class="tug-fill p1f" id="tugP1"></div>
+        <div class="tug-fill p2f" id="tugP2"></div>
+        <div class="tug-marker" id="tugMarker">⚔️</div>
+      </div>
+      <div class="tug-scores"><span class="p1s" id="tugS1">0 XP</span><span class="p2s" id="tugS2">0 XP</span></div>
+      <div class="tug-msg" id="tugMsg"></div>
+    </div>
+    <div class="section-title">📊 Category Breakdown</div>
+    <div class="cat-compare" id="catCompare"></div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="tab" id="tab-history">
+    <div id="historyContent"></div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="tab" id="tab-settings">
+    <div class="section-title">⚙️ Your Profile</div>
+    <div class="setting-group">
+      <label>Display name</label>
+      <input id="set_name" maxlength="16">
+      <label>Avatar</label>
+      <div class="emoji-picker" id="ePickSet" style="margin-bottom:14px"></div>
+      <button class="setting-btn btn-save" onclick="saveSettings()">Save Profile</button>
+    </div>
+    <div class="section-title">🔗 Duel Room</div>
+    <div class="setting-group">
+      <label>Invite code</label>
+      <div class="room-code" id="roomCodeBig">------</div>
+      <button class="setting-btn btn-export" onclick="copyCode()">📋 Copy invite message</button>
+      <div class="acct" id="acctInfo"></div>
+      <button class="setting-btn btn-danger" onclick="doSignOut()">🚪 Sign out</button>
+    </div>
+  </div>
+</main>
+
+<!-- ═══ BOTTOM NAV ═══ -->
+<nav>
+  <button class="active" data-tab="log"><span class="nav-icon">📝</span>Log</button>
+  <button data-tab="duel"><span class="nav-icon">⚔️</span>Duel</button>
+  <button data-tab="history"><span class="nav-icon">📜</span>History</button>
+  <button data-tab="settings"><span class="nav-icon">⚙️</span>Settings</button>
+</nav>
+
+<!-- ═══ CONFETTI ═══ -->
+<canvas id="confetti"></canvas>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,onAuthStateChanged,GoogleAuthProvider,signInWithPopup,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,getDoc,setDoc,updateDoc,deleteDoc,addDoc,collection,onSnapshot,arrayUnion,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+/* ═══════════════════════════════════════════
+   FIREBASE CONFIG  ← paste yours here
+   (Firebase console → Project settings → Your apps → Web app)
+   ═══════════════════════════════════════════ */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqX_vwWbIeM08d9TGWCsmW7llbbKCKP-8",
+    authDomain: "study-duel-varun.firebaseapp.com",
+    projectId: "study-duel-varun",
+    storageBucket: "study-duel-varun.firebasestorage.app",
+    messagingSenderId: "1053284354409",
+    appId: "1:1053284354409:web:1f29bfb3c38fb7278915f8",
+    measurementId: "G-Q0BFKXGTTX"
+  };const CONFIGURED = !firebaseConfig.apiKey.startsWith('PASTE');
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = initializeFirestore(fbApp, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})});
+const $ = id => document.getElementById(id);
+
+/* ═══════════════════════════════════════════
+   DATA & CONSTANTS
+   ═══════════════════════════════════════════ */
+const CATS = {
+  study:    {icon:'📚', label:'Study',    color:'#ff6b6b'},
+  code:     {icon:'💻', label:'Coding',   color:'#48dbfb'},
+  read:     {icon:'📖', label:'Reading',  color:'#feca57'},
+  exercise: {icon:'💪', label:'Exercise', color:'#ff9ff3'},
+  creative: {icon:'🎨', label:'Creative', color:'#55efc4'},
+  wellness: {icon:'🧘', label:'Wellness', color:'#a29bfe'}
+};
+
+const AVATARS = ['🧑‍💻','🧑‍🎓','🦊','🐉','🚀','🎯','🧠','⚡','🔥','🌟','🎮','🏆','🦁','🐺','🦅','🌸'];
+
+const LEVELS = [
+  {min:0,    title:'Couch Potato 🥔'},
+  {min:60,   title:'Rookie 🌱'},
+  {min:200,  title:'Hustler 🔥'},
+  {min:500,  title:'Grinder ⚡'},
+  {min:1000, title:'Scholar 🎓'},
+  {min:2000, title:'Beast Mode 🦁'},
+  {min:4000, title:'Legend 👑'},
+  {min:7000, title:'Transcended ✨'}
+];
+
+const TUG_MSGS = [
+  ["is absolutely dominating! 💀","is on fire! 🔥","is pulling ahead! 💪","has a slight edge 👀"],
+  ["It's dead even! ⚖️"],
+  ["is absolutely dominating! 💀","is on fire! 🔥","is pulling ahead! 💪","has a slight edge 👀"]
+];
+
+const QUOTES = [
+  "Locked in! 🔒","Grind don't stop! ⚡","That's how it's done! 💪","Consistency is key! 🔑",
+  "Another one! 🎯","You're cooking! 🔥","Beast mode ON! 🦁","Keep stacking! 📚",
+  "Discipline > Motivation 🧠","Your future self thanks you! 🌟"
+];
+
+
+/* players[0] = ME, players[1] = PARTNER (built from Firestore) */
+let state = {players:[
+  {uid:null,name:'Me',emoji:'🧑‍💻',activities:[]},
+  {uid:null,name:'Waiting…',emoji:'⏳',activities:[]}
+]};
+let selCat = 'study', selPeriod = 'today';
+
+/* session / realtime */
+let me=null, roomId=null, room=null, acts=[];
+let unsubRoom=null, unsubActs=null, firstActs=true, prevCount=null, appShown=false;
+
+/* ═══════════════════════════════════════════
+   DATE UTILITIES  (local time – the old version used UTC,
+   which rolled "today" over at 5:30am in India)
+   ═══════════════════════════════════════════ */
+function ymd(d){const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
+function todayStr(){return ymd(new Date())}
+function dateStr(d){return ymd(d)}
+function daysBetween(a,b){return Math.round((new Date(a)-new Date(b))/864e5)}
+function prettyDate(ds){
+  const t=todayStr();
+  if(ds===t) return 'Today';
+  if(daysBetween(t,ds)===1) return 'Yesterday';
+  return new Date(ds+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+}
+function startOfWeek(){const d=new Date();d.setDate(d.getDate()-d.getDay());return ymd(d)}
+
+/* ═══════════════════════════════════════════
+   XP, LEVELS & FILTERING
+   ═══════════════════════════════════════════ */
+function calcStreak(p){
+  const acts=p.activities;if(!acts.length)return 0;
+  const days=[...new Set(acts.map(a=>a.date))].sort().reverse();
+  const today=todayStr();
+  if(days[0]!==today && daysBetween(today,days[0])>1) return 0;
+  let streak=1;
+  for(let i=0;i<days.length-1;i++){
+    if(daysBetween(days[i],days[i+1])===1) streak++;
+    else break;
+  }
+  return streak;
+}
+function totalXP(p){return p.activities.reduce((s,a)=>s+a.xp,0)}
+function getLevel(xp){
+  let lv=LEVELS[0];
+  for(const l of LEVELS) if(xp>=l.min) lv=l;
+  return lv;
+}
+function nextLevel(xp){
+  for(const l of LEVELS) if(xp<l.min) return l;
+  return null;
+}
+function levelProgress(xp){
+  const cur=getLevel(xp),nxt=nextLevel(xp);
+  if(!nxt) return 1;
+  return (xp-cur.min)/(nxt.min-cur.min);
+}
+
+/* ═══════════════════════════════════════════
+   FILTERING
+   ═══════════════════════════════════════════ */
+function filterActs(p, period){
+  const today=todayStr(), ws=startOfWeek();
+  return p.activities.filter(a=>{
+    if(period==='today') return a.date===today;
+    if(period==='week') return a.date>=ws;
+    return true;
+  });
+}
+function periodXP(p,period){return filterActs(p,period).reduce((s,a)=>s+a.xp,0)}
+function periodMin(p,period){return filterActs(p,period).reduce((s,a)=>s+a.duration,0)}
+function catMinutes(p,period,cat){return filterActs(p,period).filter(a=>a.category===cat).reduce((s,a)=>s+a.duration,0)}
+
+/* ═══════════════════════════════════════════
+   RENDERING
+   ═══════════════════════════════════════════ */
+function renderStatBar(){
+  const bar=$('statBar');
+  if(bar.children.length!==2){
+    bar.innerHTML=[1,2].map(n=>`<div class="stat-card p${n}"><div class="sc-top"><span class="sc-emoji"></span><div><div class="sc-name"></div><div class="sc-title"></div></div></div><div class="xp-bar"><div class="xp-fill" style="width:0%"></div></div><div class="sc-meta"><span class="sc-xp"></span><span class="sc-streak"></span></div></div>`).join('');
+  }
+  state.players.forEach((p,i)=>{
+    const c=bar.children[i], xp=totalXP(p), lv=getLevel(xp), streak=calcStreak(p), today=periodMin(p,'today');
+    c.querySelector('.sc-emoji').textContent=p.emoji;
+    c.querySelector('.sc-name').textContent=p.name;
+    c.querySelector('.sc-title').textContent=lv.title;
+    c.querySelector('.xp-fill').style.width=(levelProgress(xp)*100).toFixed(1)+'%';
+    c.querySelector('.sc-xp').textContent=`${xp} XP · ${today}m today`;
+    c.querySelector('.sc-streak').innerHTML=streak>0?`<span class="streak-badge">🔥 ${streak} day${streak>1?'s':''}</span>`:'';
+  });
+}
+function pulseCard(i){const c=$('statBar').children[i];if(!c)return;c.classList.remove('pulse');void c.offsetWidth;c.classList.add('pulse')}
+
+function renderBanner(){
+  const b=$('partnerBanner');
+  if(room && room.members.length<2){
+    b.style.display='flex';
+    b.innerHTML=`<span>⏳ Waiting for your partner. Code: <b>${esc(roomId)}</b></span><button onclick="copyCode()">Copy invite</button>`;
+  } else b.style.display='none';
+}
+
+function renderCatGrid(){
+  const el=document.getElementById('catGrid');
+  el.innerHTML=Object.entries(CATS).map(([k,v])=>
+    `<button class="cat-btn ${selCat===k?'sel':''}" onclick="pickCat('${k}')"><span class="cat-icon">${v.icon}</span><span class="cat-label">${v.label}</span></button>`
+  ).join('');
+}
+
+function renderDuel(){
+  // period toggle
+  const pt=document.getElementById('periodToggle');
+  pt.innerHTML=['today','week','all'].map(p=>
+    `<button class="${selPeriod===p?'sel':''}" onclick="pickPeriod('${p}')">${p==='today'?'Today':p==='week'?'This Week':'All Time'}</button>`
+  ).join('');
+
+  const p1=state.players[0], p2=state.players[1];
+  const x1=periodXP(p1,selPeriod), x2=periodXP(p2,selPeriod);
+  const total=x1+x2||1;
+
+  // Tug of war bar
+  const pct1=(x1/total*100);
+  document.getElementById('tugP1').style.width=pct1+'%';
+  document.getElementById('tugP2').style.width=(100-pct1)+'%';
+  document.getElementById('tugMarker').style.left=pct1+'%';
+  document.getElementById('tugS1').textContent=x1+' XP';
+  document.getElementById('tugS2').textContent=x2+' XP';
+
+  // Message
+  const diff=Math.abs(x1-x2), ratio=total>0?diff/total:0;
+  let msg='';
+  if(x1===x2){msg=TUG_MSGS[1][0]}
+  else{
+    const winner=x1>x2?p1.name:p2.name;
+    const idx=ratio>.6?0:ratio>.35?1:ratio>.15?2:3;
+    msg=winner+' '+TUG_MSGS[0][idx];
+  }
+  document.getElementById('tugMsg').textContent=msg;
+
+  // Category comparison
+  const cc=document.getElementById('catCompare');
+  cc.innerHTML=Object.entries(CATS).map(([k,v])=>{
+    const m1=catMinutes(p1,selPeriod,k), m2=catMinutes(p2,selPeriod,k);
+    const max=Math.max(m1,m2)||1;
+    return `<div class="cc-row">
+      <div class="cc-label">${v.icon} ${v.label}</div>
+      <div class="cc-bars">
+        <span class="cc-val" style="color:var(--p1)">${m1}m</span>
+        <div class="cc-bar-wrap"><div class="cc-bar-fill p1f" style="width:${(m1/max*100).toFixed(1)}%"></div></div>
+        <div class="cc-bar-wrap"><div class="cc-bar-fill p2f" style="width:${(m2/max*100).toFixed(1)}%"></div></div>
+        <span class="cc-val" style="color:var(--p2)">${m2}m</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(){
+  const el=document.getElementById('historyContent');
+  const all=[...state.players[0].activities.map(a=>({...a,pi:0})),...state.players[1].activities.map(a=>({...a,pi:1}))];
+  all.sort((a,b)=>b.timestamp-a.timestamp);
+  if(!all.length){el.innerHTML=`<div class="empty-state"><div class="es-icon">📭</div><p>No activities logged yet.<br>Go log something!</p></div>`;return}
+
+  let html='',lastDate='';
+  for(const a of all){
+    if(a.date!==lastDate){lastDate=a.date;html+=`<div class="history-date">📅 ${prettyDate(a.date)}</div>`}
+    const p=state.players[a.pi], cat=CATS[a.category]||CATS.study;
+    const time=new Date(a.timestamp).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+    html+=`<div class="activity-card p${a.pi+1}-border">
+      <span class="ac-icon">${cat.icon}</span>
+      <div class="ac-body">
+        <div class="ac-top-row"><span class="ac-who">${esc(p.emoji)} ${esc(p.name)}</span><span class="ac-xp">+${a.xp} XP</span></div>
+        ${a.description?`<div class="ac-desc">${esc(a.description)}</div>`:''}
+        <div class="ac-meta"><span>⏱ ${a.duration}m</span><span>${cat.label}</span><span>${time}</span></div>
+      </div>
+      ${a.pi===0?`<button class="ac-delete" onclick="deleteAct('${a.id}')">✕</button>`:''}
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+
+function renderSettings(){
+  if(!room||!me) return;
+  const mine=(room.profiles||{})[me.uid]||{};
+  $('set_name').value=mine.name||'';
+  setEmoji=Math.max(0,AVATARS.indexOf(mine.emoji));
+  buildPicker('ePickSet',()=>setEmoji,i=>setEmoji=i);
+  $('roomCodeBig').textContent=roomId;
+  $('acctInfo').textContent='Signed in as '+(me.email||me.displayName||'');
+}
+function renderAll(){renderStatBar();renderBanner();renderCatGrid();renderDuel();renderHistory()}
+
+/* ═══════════════════════════════════════════
+   LOGGING
+   ═══════════════════════════════════════════ */
+function pickCat(c){selCat=c;renderCatGrid()}
+function setDur(m){$('logDur').value=m}
+function pickPeriod(p){selPeriod=p;renderDuel()}
+
+function submitLog(){
+  if(!roomId||!me) return;
+  const desc=$('logDesc').value.trim();
+  const dur=parseInt($('logDur').value)||0;
+  if(dur<1||dur>720){toast('⏱️ Enter 1–720 minutes!');return}
+
+  const streak=calcStreak(state.players[0]);
+  const bonus=Math.min(streak*0.1, 0.5);
+  const xp=Math.round(dur*(1+bonus));
+
+  // not awaited on purpose: Firestore applies it locally instantly (and syncs when online)
+  addDoc(collection(db,'rooms',roomId,'activities'),{
+    uid:me.uid,category:selCat,description:desc,duration:dur,xp,date:todayStr(),timestamp:Date.now()
+  }).catch(e=>{console.error(e);toast('❌ Could not save – check connection')});
+
+  $('logDesc').value='';$('logDur').value='30';
+  fireConfetti();
+  toast(QUOTES[Math.floor(Math.random()*QUOTES.length)]+` +${xp} XP`);
+}
+
+function deleteAct(id){
+  if(!roomId) return;
+  deleteDoc(doc(db,'rooms',roomId,'activities',id)).then(()=>toast('Removed! 🗑️')).catch(()=>toast('❌ Could not delete'));
+}
+
+/* ═══════════════════════════════════════════
+   AVATAR PICKER
+   ═══════════════════════════════════════════ */
+let pairEmoji=0, setEmoji=0;
+function buildPicker(id,getSel,setSel){
+  const el=$(id);
+  el.innerHTML=AVATARS.map((e,i)=>`<button data-i="${i}" class="${getSel()===i?'sel':''}">${e}</button>`).join('');
+  el.onclick=ev=>{
+    const b=ev.target.closest('button');if(!b)return;
+    setSel(+b.dataset.i);
+    el.querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x===b));
+  };
+}
+
+/* ═══════════════════════════════════════════
+   SCREENS
+   ═══════════════════════════════════════════ */
+function show(name){
+  ['loadScreen','authScreen','pairScreen'].forEach(id=>$(id).style.display=(id===name)?'flex':'none');
+}
+function showPair(){
+  stopRoom();
+  buildPicker('ePickPair',()=>pairEmoji,i=>pairEmoji=i);
+  if(!$('p_name').value) $('p_name').value=(me.displayName||'').split(' ')[0].slice(0,16);
+  $('pairWho').textContent='Signed in as '+(me.email||me.displayName||'');
+  show('pairScreen');
+}
+
+/* ═══════════════════════════════════════════
+   AUTH
+   ═══════════════════════════════════════════ */
+async function signInGoogle(){
+  $('authErr').textContent='';
+  if(!CONFIGURED){$('authErr').textContent='Firebase config not filled in yet – see the CONFIG block in the code.';return}
+  const btn=$('googleBtn');btn.disabled=true;
+  try{ await signInWithPopup(auth,new GoogleAuthProvider()) }
+  catch(e){
+    const c=e.code||'';
+    if(c==='auth/unauthorized-domain') $('authErr').textContent='This domain isn\'t authorised in Firebase (Authentication → Settings → Authorized domains).';
+    else if(c!=='auth/popup-closed-by-user'&&c!=='auth/cancelled-popup-request') $('authErr').textContent='Sign-in failed: '+(c||e.message);
+  }
+  btn.disabled=false;
+}
+function doSignOut(){stopRoom();signOut(auth)}
+
+onAuthStateChanged(auth, async user=>{
+  stopRoom();
+  me=user;
+  if(!user){show('authScreen');if(!CONFIGURED)$('authErr').textContent='Firebase config not filled in yet – see the CONFIG block in the code.';return}
+  show('loadScreen');
+  try{
+    const u=await getDoc(doc(db,'users',user.uid));
+    if(u.exists()&&u.data().roomId) startRoom(u.data().roomId); else showPair();
+  }catch(e){console.error(e);showPair();toast('⚠️ Could not load your profile')}
+});
+
+/* ═══════════════════════════════════════════
+   ROOMS (create / join)
+   ═══════════════════════════════════════════ */
+function genCode(){
+  const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r=crypto.getRandomValues(new Uint8Array(6));
+  return Array.from(r,b=>A[b%A.length]).join('');
+}
+function myProfile(){
+  return {name:$('p_name').value.trim()||(me.displayName||'Player').split(' ')[0].slice(0,16),emoji:AVATARS[pairEmoji]};
+}
+async function createDuel(){
+  const prof=myProfile(), code=genCode();
+  try{
+    await setDoc(doc(db,'rooms',code),{members:[me.uid],profiles:{[me.uid]:prof},createdAt:serverTimestamp()});
+    await setDoc(doc(db,'users',me.uid),{roomId:code});
+    startRoom(code);
+  }catch(e){console.error(e);toast('❌ Could not create duel')}
+}
+async function joinDuel(){
+  const code=$('p_code').value.trim().toUpperCase(), prof=myProfile();
+  if(code.length!==6){toast('Enter the 6-character code');return}
+  try{
+    const ref=doc(db,'rooms',code), snap=await getDoc(ref);
+    if(!snap.exists()){toast('❌ No duel with that code');return}
+    const members=snap.data().members||[];
+    if(!members.includes(me.uid)){
+      if(members.length>=2){toast('❌ That duel is already full');return}
+      await updateDoc(ref,{members:arrayUnion(me.uid),['profiles.'+me.uid]:prof});
+    }
+    await setDoc(doc(db,'users',me.uid),{roomId:code});
+    startRoom(code);
+  }catch(e){console.error(e);toast('❌ Could not join – check the code')}
+}
+
+/* ═══════════════════════════════════════════
+   REALTIME SYNC
+   ═══════════════════════════════════════════ */
+function stopRoom(){
+  if(unsubRoom)unsubRoom();if(unsubActs)unsubActs();
+  unsubRoom=unsubActs=null;roomId=null;room=null;acts=[];prevCount=null;firstActs=true;appShown=false;
+}
+function leaveBroken(msg){
+  const u=me;stopRoom();
+  if(u) setDoc(doc(db,'users',u.uid),{roomId:null}).catch(()=>{});
+  showPair();toast(msg);
+}
+function rebuild(){
+  const uid=me.uid, pu=room.members.find(x=>x!==uid), prof=room.profiles||{};
+  const mine=prof[uid]||{name:(me.displayName||'Me').split(' ')[0],emoji:AVATARS[0]};
+  const theirs=pu?(prof[pu]||{name:'Partner',emoji:AVATARS[1]}):{name:'Waiting…',emoji:'⏳'};
+  state.players=[
+    {uid,name:mine.name,emoji:mine.emoji,activities:acts.filter(a=>a.uid===uid)},
+    {uid:pu||null,name:theirs.name,emoji:theirs.emoji,activities:pu?acts.filter(a=>a.uid===pu):[]}
+  ];
+  renderAll();
+}
+function startRoom(id){
+  stopRoom();roomId=id;
+  unsubRoom=onSnapshot(doc(db,'rooms',id),snap=>{
+    if(!snap.exists()){if(snap.metadata.fromCache)return;leaveBroken('That duel no longer exists');return}
+    room=snap.data();
+    if(!room.members.includes(me.uid)){leaveBroken('You\'re not part of that duel');return}
+    if(prevCount!==null&&prevCount<2&&room.members.length===2) toast('🎉 Your partner joined!');
+    prevCount=room.members.length;
+    rebuild();
+    if(!appShown){appShown=true;show(null);renderSettings()}
+  },err=>{console.error(err);leaveBroken('Could not open your duel')});
+
+  unsubActs=onSnapshot(collection(db,'rooms',id,'activities'),snap=>{
+    acts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(room) rebuild();
+    if(!firstActs){
+      snap.docChanges().forEach(ch=>{
+        if(ch.type!=='added'||ch.doc.metadata.hasPendingWrites) return;
+        const a=ch.doc.data();
+        if(a.uid===me.uid||Date.now()-a.timestamp>120000) return;
+        const cat=(CATS[a.category]||CATS.study);
+        toast(`${state.players[1].name}: ${cat.icon} ${a.duration}m  +${a.xp} XP`);
+        pulseCard(1);
+      });
+    }
+    firstActs=false;
+  },err=>console.error(err));
+}
+
+/* ═══════════════════════════════════════════
+   SETTINGS ACTIONS
+   ═══════════════════════════════════════════ */
+function saveSettings(){
+  const name=$('set_name').value.trim()||'Player';
+  updateDoc(doc(db,'rooms',roomId),{['profiles.'+me.uid]:{name,emoji:AVATARS[setEmoji]}})
+    .then(()=>toast('Saved! ✅')).catch(()=>toast('❌ Could not save'));
+}
+function copyCode(){
+  const link=location.origin+location.pathname;
+  const msg=`Join my StudyDuel ⚔️ Open ${link} , sign in with Google and enter code: ${roomId}`;
+  if(navigator.share){navigator.share({text:msg}).catch(()=>{});return}
+  navigator.clipboard.writeText(msg).then(()=>toast('📋 Invite copied – send it to your partner!'));
+}
+
+/* ═══════════════════════════════════════════
+   TAB SWITCHING
+   ═══════════════════════════════════════════ */
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    $('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='duel')renderDuel();
+    if(btn.dataset.tab==='history')renderHistory();
+    if(btn.dataset.tab==='settings')renderSettings();
+  });
+});
+
+/* keep "today" correct if the app is left open past midnight */
+setInterval(()=>{if(appShown){renderStatBar();renderDuel();renderHistory()}},60000);
+
+/* inline onclick="" handlers need globals because this is a module */
+Object.assign(window,{signInGoogle,createDuel,joinDuel,pickCat,setDur,pickPeriod,submitLog,deleteAct,saveSettings,copyCode,doSignOut});
+
+/* ═══════════════════════════════════════════
+   CONFETTI 🎉
+   ═══════════════════════════════════════════ */
+const cvs=document.getElementById('confetti'), ctx=cvs.getContext('2d');
+let particles=[], confettiRunning=false;
+function resizeCvs(){cvs.width=innerWidth;cvs.height=innerHeight}
+window.addEventListener('resize',resizeCvs);resizeCvs();
+
+function fireConfetti(){
+  particles=[];
+  const colors=['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#55efc4','#a29bfe','#fd79a8'];
+  for(let i=0;i<80;i++){
+    particles.push({
+      x:innerWidth/2+(Math.random()-.5)*200,
+      y:innerHeight*.4,
+      vx:(Math.random()-.5)*12,
+      vy:-Math.random()*14-4,
+      w:Math.random()*8+4,
+      h:Math.random()*6+3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      rot:Math.random()*360,
+      rv:(Math.random()-.5)*12,
+      life:1
+    });
+  }
+  if(!confettiRunning){confettiRunning=true;animateConfetti()}
+}
+function animateConfetti(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  let alive=false;
+  for(const p of particles){
+    if(p.life<=0)continue;alive=true;
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.rot+=p.rv;p.life-=.012;p.vx*=.99;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);
+    ctx.globalAlpha=p.life;ctx.fillStyle=p.color;
+    ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();
+  }
+  if(alive)requestAnimationFrame(animateConfetti);
+  else{ctx.clearRect(0,0,cvs.width,cvs.height);confettiRunning=false}
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════ */
+let toastTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2400);
+}
+
+/* ═══════════════════════════════════════════
+   UTILITY
+   ═══════════════════════════════════════════ */
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+
+</script>
+</body>
+</html>
